@@ -1,106 +1,98 @@
 use color_eyre::Result;
+
 use crossterm::event::{self, KeyCode};
-use ratatui::{DefaultTerminal, Frame, layout::{Constraint, Layout, Rect}, style::{Color, Style}, text::Text, widgets::{Cell, HighlightSpacing, Row, Table, TableState}};
+use ratatui::layout::{Constraint, Layout};
+use ratatui::{DefaultTerminal, Frame};
 
-use crate::skill::Skill;
-use crate::stat::Stat;
+use crate::components::skill_table::{SkillTable, generate_conflict_skills, generate_general_skills, generate_professional_skills, generate_survival_skills};
+use crate::level::{LevelPlan, SkillCategory};
 
-struct SkillLevels {
-    // Contains the current level for each
-    skills: [usize; Skill::length()]
-}
-
-struct Data {
-    stat_primary: Stat,
-    stat_secondary: Stat,
-    skill: Skill,
-}
-
-impl Data {
-    fn new(skill: &Skill) -> Self {
-        Data {
-            skill: skill.clone(),
-            stat_primary: skill.get_pri_stat(),
-            stat_secondary: skill.get_sec_stat(),
-        }
-    }
-
-    fn ref_array(&self) -> [Text; 3] {
-        [
-            self.stat_primary.to_pri_text(),
-            self.stat_secondary.to_sec_text(),
-            Text::from(self.skill.to_string()),
-        ]
-    }
-
-    fn stat_primary(&self) -> &Stat {
-        &self.stat_primary
-    }
-
-    fn stat_secondary(&self) -> &Stat {
-        &self.stat_secondary
-    }
-
-    fn skill(&self) -> &Skill {
-        &self.skill
-    }
-}
 
 pub struct App {
-    state: TableState,
-    items: Vec<Data>,
+    skill_tables: [SkillTable; 4],
+    selected_table: usize,
+
+    level_plan: LevelPlan,
 }
 
-// Should be able to move the table rendering functionality into its own
-// impl, and have the App call multiple with Rects it predetermines.
 impl App {
     pub fn new() -> Self {
-        let data_vec = generate_general_skills();
         Self {
-            state: TableState::default().with_selected(0),
-            items: data_vec,
+            skill_tables: [
+                SkillTable::new(generate_survival_skills()),
+                SkillTable::new(generate_general_skills()),
+                SkillTable::new(generate_professional_skills()),
+                SkillTable::new(generate_conflict_skills()),
+            ],
+            selected_table: 0,
+
+            level_plan: LevelPlan::new(),
         }
     }
 
-    pub const fn next_row(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() -1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
+    fn decrement_selected_table(&mut self) {
+        if self.selected_table == 0 { self.selected_table = 3; }
+        else { self.selected_table -= 1; }
     }
 
-    pub const fn previous_row(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
+    fn increment_selected_table(&mut self) {
+        self.selected_table += 1;
+        self.selected_table %= 4;
     }
 
     pub fn run(mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+        self.skill_tables[0].set_selected(Some(0));
+
         loop {
+            self.level_plan.calculate();
+
             terminal.draw(|frame| self.render(frame))?;
 
-
             if let Some(key) = event::read()?.as_key_press_event() {
-                // let shift_pressed = key.modifiers.contains(KeyModifiers::SHIFT);
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
-                    KeyCode::Char('j') => self.next_row(),
-                    KeyCode::Char('k') => self.previous_row(),
+                    KeyCode::Enter => {
+                        let selected_skill = self.skill_tables[self.selected_table]
+                                                .selected_skill();
+                        match selected_skill {
+                            Some(skill) => self.level_plan.level_skill(skill),
+                            None => {}
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        let selected_skill = self.skill_tables[self.selected_table]
+                                                .selected_skill();
+                        match selected_skill {
+                            Some(skill) => self.level_plan.delevel_skill(skill),
+                            None => {}
+                        }
+                    }
+                    KeyCode::Char('j') => self.skill_tables[self.selected_table].next_row(),
+                    KeyCode::Char('k') => self.skill_tables[self.selected_table].previous_row(),
+                    KeyCode::Char('h') => {
+                        let selection = match self.skill_tables[self.selected_table]
+                            .currently_selected() {
+                            Some(s) => s,
+                            _ => 0,
+                        };
+                        self.skill_tables[self.selected_table].set_selected(None);
+
+                        self.decrement_selected_table();
+
+                        self.skill_tables[self.selected_table].set_selected(Some(selection));
+                    },
+                    KeyCode::Char('l') => {
+                        let selection = match self.skill_tables[self.selected_table]
+                            .currently_selected() {
+                            Some(s) => s,
+                            _ => 0,
+                        };
+                        self.skill_tables[self.selected_table].set_selected(None);
+
+                        self.increment_selected_table();
+
+                        self.skill_tables[self.selected_table].set_selected(Some(selection));
+                    },
                     _ => {},
                 }
             }
@@ -108,92 +100,47 @@ impl App {
     }
 
     fn render(&mut self, frame: &mut Frame) {
-        let layout = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
-        let rects = frame.area().layout_vec(&layout);
+        // Create the four areas to render tables in.
+        let skills_container = Layout::vertical([
+            Constraint::Length(10),
+            Constraint::Length(10),
+        ]);
+        let rects_container = frame.area().layout_vec(&skills_container);
 
-        self.render_table(frame, rects[0]);
+        let blocks_top = Layout::horizontal([
+            Constraint::Length(53),
+            Constraint::Length(53),
+        ]).split(rects_container[0]);
+        let blocks_bottom = Layout::horizontal([
+            Constraint::Length(53),
+            Constraint::Length(53),
+        ]).split(rects_container[1]);
+
+
+        // Render tables into each area.
+        self.skill_tables[0].render_table(
+            frame, 
+            blocks_top[0], 
+            self.level_plan.get_levels_chunk(SkillCategory::SURVIVAL),
+            self.level_plan.get_costs_chunk(SkillCategory::SURVIVAL),
+        );
+        self.skill_tables[1].render_table(
+            frame, 
+            blocks_top[1], 
+            self.level_plan.get_levels_chunk(SkillCategory::GENERAL),
+            self.level_plan.get_costs_chunk(SkillCategory::GENERAL),
+        );
+        self.skill_tables[2].render_table(
+            frame, 
+            blocks_bottom[0], 
+            self.level_plan.get_levels_chunk(SkillCategory::PROFESSIONAL),
+            self.level_plan.get_costs_chunk(SkillCategory::PROFESSIONAL),
+        );
+        self.skill_tables[3].render_table(
+            frame, 
+            blocks_bottom[1], 
+            self.level_plan.get_levels_chunk(SkillCategory::CONFLICT),
+            self.level_plan.get_costs_chunk(SkillCategory::CONFLICT),
+        );
     }
-
-    fn render_table(&mut self, frame: &mut Frame, area: Rect) {
-        let header_style = Style::default();
-        let selected_row_style = Style::default()
-            .bg(Color::DarkGray);
-        let header = ["(Sec", "PRI)", "NAME"]
-            .into_iter()
-            .map(Cell::from)
-            .collect::<Row>()
-            .style(header_style);
-
-        let rows = self.items.iter().enumerate().map(|(i, data)| {
-            let item = data.ref_array();
-            item.into_iter()
-                .map(|content| {
-                    Cell::from(content)
-                })
-                .collect::<Row>()
-                .style(Style::new())
-                .height(1)
-        });
-        let t = Table::new(
-            rows,
-            [
-                Constraint::Length(4),
-                Constraint::Length(5),
-                Constraint::Length(12),
-            ],
-            )
-            .header(header)
-            .row_highlight_style(selected_row_style)
-            .highlight_spacing(HighlightSpacing::Always);
-
-        frame.render_stateful_widget(t, area, &mut self.state);
-    }
-}
-
-fn generate_survival_skills() -> Vec<Data> {
-    vec![
-        Data::new(&Skill::HEALTH),
-        Data::new(&Skill::SEARCH),
-        Data::new(&Skill::STEALTH),
-        Data::new(&Skill::MEDICINE),
-        Data::new(&Skill::DECEPTION),
-        Data::new(&Skill::CLIMB),
-        Data::new(&Skill::DILIGENCE),
-    ]
-}
-
-fn generate_general_skills() -> Vec<Data> {
-    vec![
-        Data::new(&Skill::STAMINA),
-        Data::new(&Skill::EAVESDROP),
-        Data::new(&Skill::SPRINT),
-        Data::new(&Skill::CHRONICLE),
-        Data::new(&Skill::APPEARANCE),
-        Data::new(&Skill::LABOR),
-        Data::new(&Skill::OCCULT),
-    ]
-}
-
-fn generate_professional_skills() -> Vec<Data> {
-    vec![
-        Data::new(&Skill::TRAVEL),
-        Data::new(&Skill::INVESTIGATE),
-        Data::new(&Skill::REPAIR),
-        Data::new(&Skill::CHEMISTRY),
-        Data::new(&Skill::COOKING),
-        Data::new(&Skill::CREATIVITY),
-        Data::new(&Skill::TALENT),
-    ]
-}
-
-fn generate_conflict_skills() -> Vec<Data> {
-    vec![
-        Data::new(&Skill::FISTS),
-        Data::new(&Skill::GUNS),
-        Data::new(&Skill::BLADES),
-        Data::new(&Skill::PERFORMANCE),
-        Data::new(&Skill::TOXINS),
-        Data::new(&Skill::MELEE),
-        Data::new(&Skill::ESCAPE),
-    ]
 }

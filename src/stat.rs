@@ -11,6 +11,8 @@ pub enum Stat {
 }
 
 impl Stat {
+    pub const fn index(self) -> usize { self as usize }
+
     pub const fn to_pri_string(&self) -> &'static str {
         match self {
             Self::CONDITION => "CON",
@@ -36,7 +38,7 @@ impl Stat {
     }
 
     pub fn to_pri_text(&self) -> Text {
-        Text::from(self.to_pri_string())
+        Text::from(String::from(" ") + self.to_pri_string())
             .style(Style::default().fg(self.to_color()))
     }
 

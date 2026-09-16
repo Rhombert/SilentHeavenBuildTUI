@@ -1,6 +1,6 @@
 use crate::stat::Stat;
 
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Skill {
     HEALTH,
     SEARCH,
@@ -36,7 +36,47 @@ pub enum Skill {
 }
 
 impl Skill {
+    pub fn from(number: usize) -> Self {
+        match number {
+            0 => Self::HEALTH,
+            1 => Self::SEARCH,
+            2 => Self::STEALTH,
+            3 => Self::MEDICINE,
+            4 => Self::DECEPTION,
+            5 => Self::CLIMB,
+            6 => Self::DILIGENCE,
+
+            7 => Self::STAMINA,
+            8 => Self::EAVESDROP,
+            9 => Self::SPRINT,
+            10 => Self::CHRONICLE,
+            11 => Self::APPEARANCE,
+            12 => Self::LABOR,
+            13 => Self::OCCULT,
+
+            14 => Self::TRAVEL,
+            15 => Self::INVESTIGATE,
+            16 => Self::REPAIR,
+            17 => Self::CHEMISTRY,
+            18 => Self::COOKING,
+            19 => Self::CREATIVITY,
+            20 => Self::TALENT,
+
+            21 => Self::FISTS,
+            22 => Self::GUNS,
+            23 => Self::BLADES,
+            24 => Self::PERFORMANCE,
+            25 => Self::TOXINS,
+            26 => Self::MELEE,
+            27 => Self::ESCAPE,
+
+            _ => Self::HEALTH,
+        }
+    }
+
     pub const fn length() -> usize { 28 }
+
+    pub const fn index(self) -> usize { self as usize }
 
     pub const fn to_string(&self) -> &'static str {
         match self {
