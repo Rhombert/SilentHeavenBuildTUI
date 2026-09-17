@@ -26,8 +26,8 @@ impl Data {
 
     fn ref_array(&self) -> [Text; 5] {
         [
-            self.stat_primary.to_pri_text(),
             self.stat_secondary.to_sec_text(),
+            self.stat_primary.to_pri_text(),
             Text::from(self.skill.to_string()),
             Text::from(self.rank.to_string()),
             Text::from(self.cost.to_string()),
@@ -144,6 +144,7 @@ impl SkillTable {
                 .style(Style::new())
                 .height(1)
         });
+
         let t = Table::new(
             rows,
             [

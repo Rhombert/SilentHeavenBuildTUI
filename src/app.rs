@@ -1,15 +1,23 @@
+use std::rc::Rc;
+
 use color_eyre::Result;
 
 use crossterm::event::{self, KeyCode};
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::{DefaultTerminal, Frame};
 
+use crate::components::history_table::HistoryTable;
+use crate::components::{
+    aspect_list::AspectList,
+    xp_list::XPList,
+};
 use crate::components::skill_table::{SkillTable, generate_conflict_skills, generate_general_skills, generate_professional_skills, generate_survival_skills};
 use crate::level::{LevelPlan, SkillCategory};
 
 
 pub struct App {
     skill_tables: [SkillTable; 4],
+    history_table: HistoryTable,
     selected_table: usize,
 
     level_plan: LevelPlan,
@@ -24,6 +32,7 @@ impl App {
                 SkillTable::new(generate_professional_skills()),
                 SkillTable::new(generate_conflict_skills()),
             ],
+            history_table: HistoryTable::new(),
             selected_table: 0,
 
             level_plan: LevelPlan::new(),
@@ -51,7 +60,7 @@ impl App {
             if let Some(key) = event::read()?.as_key_press_event() {
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
-                    KeyCode::Enter => {
+                    KeyCode::Char('a') => {
                         let selected_skill = self.skill_tables[self.selected_table]
                                                 .selected_skill();
                         match selected_skill {
@@ -59,7 +68,7 @@ impl App {
                             None => {}
                         }
                     }
-                    KeyCode::Backspace => {
+                    KeyCode::Char('s') => {
                         let selected_skill = self.skill_tables[self.selected_table]
                                                 .selected_skill();
                         match selected_skill {
@@ -100,22 +109,46 @@ impl App {
     }
 
     fn render(&mut self, frame: &mut Frame) {
+        let main_container = Layout::vertical([
+            Constraint::Max(20),
+            Constraint::Fill(1),
+        ]);
+
+        let main_rects = frame.area().layout_vec(&main_container);
+
         // Create the four areas to render tables in.
         let skills_container = Layout::vertical([
             Constraint::Length(10),
             Constraint::Length(10),
-        ]);
-        let rects_container = frame.area().layout_vec(&skills_container);
+        ]).split(main_rects[0]);
 
+        let bottom_panes = Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ]).split(main_rects[1]);
+
+
+        let left_bottom_pane_rects = Layout::vertical([
+            Constraint::Length(8),
+            Constraint::Length(3),
+        ]).split(bottom_panes[0]);
+
+
+        self.render_skills(frame, skills_container);
+        self.render_aspects(frame, left_bottom_pane_rects[0]);
+        self.render_xp(frame, left_bottom_pane_rects[1]);
+        self.render_history(frame, bottom_panes[1]);
+    }
+
+    fn render_skills(&mut self, frame: &mut Frame, skills_container: Rc<[Rect]>) {
         let blocks_top = Layout::horizontal([
             Constraint::Length(53),
             Constraint::Length(53),
-        ]).split(rects_container[0]);
+        ]).split(skills_container[0]);
         let blocks_bottom = Layout::horizontal([
             Constraint::Length(53),
             Constraint::Length(53),
-        ]).split(rects_container[1]);
-
+        ]).split(skills_container[1]);
 
         // Render tables into each area.
         self.skill_tables[0].render_table(
@@ -142,5 +175,22 @@ impl App {
             self.level_plan.get_levels_chunk(SkillCategory::CONFLICT),
             self.level_plan.get_costs_chunk(SkillCategory::CONFLICT),
         );
+    }
+
+    fn render_aspects(&mut self, frame: &mut Frame, container: Rect) {
+        AspectList::render(frame, container, self.level_plan.get_aspects());
+    }
+
+    fn render_xp(&mut self, frame: &mut Frame, container: Rect) {
+        XPList::render(
+            frame, container, 
+            self.level_plan.get_xp_total(),
+            self.level_plan.get_xp_locked(),
+            self.level_plan.get_xp_remaining(),
+        );
+    }
+
+    fn render_history(&mut self, frame: &mut Frame, container: Rect) {
+        self.history_table.render(frame, container, self.level_plan.get_steps());
     }
 }

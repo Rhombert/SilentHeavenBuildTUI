@@ -1,6 +1,26 @@
 use std::convert::TryFrom;
 
+use ratatui::text::Text;
+
 use crate::skill::Skill;
+
+
+fn calculate_next_level_cost(
+    level: Level,
+    skill: Skill,
+    aspects: &[u32],
+) -> u32 {
+    let base_cost = level.level_up_cost() as f64;
+    let pri_stat = skill.get_pri_stat();
+    let stat_count = aspects[pri_stat.index()];
+
+    let rounded_stat_count = stat_count as f64 - (stat_count % 10) as f64;
+    let discount = 1.00 - (rounded_stat_count / 100.0);
+
+    let final_cost = base_cost * discount;
+
+    final_cost as u32
+}
 
 pub enum SkillCategory {
     SURVIVAL,
@@ -9,8 +29,36 @@ pub enum SkillCategory {
     CONFLICT,
 }
 
+pub struct LevelStep {
+    skill: Skill,
+    level: Level,
+    cost: u32,
+}
+
+impl LevelStep {
+    pub fn new(skill: Skill, level: Level, cost: u32) -> Self {
+        LevelStep { skill, level, cost }
+    }
+
+    pub fn ref_array(&self) -> [Text; 3] {
+        [
+            Text::from(self.skill.to_string()),
+            Text::from(self.level.to_string()),
+            Text::from(self.cost.to_string()),
+        ]
+    }
+
+    pub fn calculate_base_cost(&self) -> u32 {
+        self.level.level_up_cost()
+    }
+
+    pub fn calculate_final_cost(&self, aspects: &[u32]) -> u32 {
+        calculate_next_level_cost(self.level, self.skill, aspects)
+    }
+}
+
 pub struct LevelPlan {
-    steps: Vec<Skill>,
+    steps: Vec<LevelStep>,
     levels: [Level; 28],
     aspects: [u32; 7],
     costs: [u32; 28],
@@ -36,9 +84,37 @@ impl LevelPlan {
         }
     }
 
+    pub fn get_xp_total(&self) -> u32 { self.xp_total }
+    pub fn get_xp_locked(&self) -> u32 { self.xp_locked }
+    pub fn get_xp_remaining(&self) -> u32 { self.xp_remaining }
+
+    pub fn get_steps(&self) -> &Vec<LevelStep> { &self.steps }
+
+    pub fn get_aspects(&self) -> &[u32] {
+        return &self.aspects
+    }
+
     pub fn calculate(&mut self) {
         self.calculate_aspects();
         self.calculate_costs();
+        self.recalculate_plan();
+        self.calculate_xp_usage();
+    }
+
+    fn recalculate_plan(&mut self) {
+        let mut aspects: [u32; 7] = [0,0,0,0,0,0,0];
+
+        for step in &mut self.steps {
+            let step_cost = step.calculate_final_cost(&aspects);
+            step.cost = step_cost;
+
+            aspects[
+                step.skill.get_pri_stat().index()
+            ] += 1;
+            aspects[
+                step.skill.get_sec_stat().index()
+            ] += 1;
+        }
     }
 
     fn calculate_aspects(&mut self) {
@@ -59,19 +135,24 @@ impl LevelPlan {
         self.costs.fill(0);
 
         for i in 0..self.costs.len() {
-            let level = self.levels[i];
-            let skill = Skill::from(i);
-            let pri_stat = skill.get_pri_stat();
-            let stat_count = self.aspects[pri_stat.index()];
-            let rounded_stat_count = stat_count as f64 - (stat_count % 10) as f64;
-            let discount = 1.00 - (rounded_stat_count / 100.0);
-                                 
 
-            let base_cost = level.level_up_cost() as f64;
-            let discounted_cost = base_cost * discount;
-
-            self.costs[i] = discounted_cost as u32;
+            self.costs[i] = calculate_next_level_cost(
+                self.levels[i], 
+                Skill::from(i), 
+                &self.aspects,
+            )
         }
+    }
+
+    fn calculate_xp_usage(&mut self) {
+        self.xp_locked = 0;
+        self.xp_remaining = self.xp_total;
+
+        for step in &self.steps {
+            self.xp_locked += step.cost;
+        }
+
+        self.xp_remaining -= self.xp_locked;
     }
 
     pub fn get_levels_chunk(&self, category: SkillCategory)  -> &[Level] {
@@ -93,13 +174,20 @@ impl LevelPlan {
     }
 
     pub fn level_skill(&mut self, skill: Skill) {
-        self.steps.push(skill);
         let level = self.levels[skill.index()];
+
+        if level == Level::ASTONISHING { return }
+
         self.levels[skill.index()] = level.increase();
+        self.steps.push(LevelStep { 
+            skill, 
+            level: level.increase(),
+            cost: self.costs[skill.index()],
+        });
     }
 
     pub fn delevel_skill(&mut self, skill: Skill) {
-        match self.steps.iter().rposition(|s| *s == skill) {
+        match self.steps.iter().rposition(|s| s.skill == skill) {
             Some(idx) => { 
                 self.steps.remove(idx); 
                 let level = self.levels[skill.index()];
