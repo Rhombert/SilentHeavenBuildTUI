@@ -1,4 +1,86 @@
+use std::sync::LazyLock;
+
 use crate::stat::Stat;
+
+pub const STRENGTHS: LazyLock<Vec<Vec<Skill>>> = LazyLock::new(|| {
+    vec![
+        vec![
+            Skill::APPEARANCE,
+            Skill::CLIMB,
+            Skill::HEALTH,
+            Skill::OCCULT,
+            Skill::SPRINT,
+            Skill::STEALTH,
+        ],
+        vec![
+            Skill::BLADES,
+            Skill::ESCAPE,
+            Skill::FISTS,
+            Skill::GUNS,
+            Skill::MELEE,
+            Skill::TOXINS,
+        ],
+        vec![
+            Skill::DECEPTION,
+            Skill::EAVESDROP,
+            Skill::LABOR,
+            Skill::REPAIR,
+            Skill::SEARCH,
+            Skill::STAMINA,
+            Skill::TRAVEL,
+        ],
+        vec![
+            Skill::CHEMISTRY,
+            Skill::CHRONICLE,
+            Skill::COOKING,
+            Skill::CREATIVITY,
+            Skill::DILIGENCE,
+            Skill::INVESTIGATE,
+            Skill::MEDICINE,
+            Skill::PERFORMANCE,
+            Skill::TALENT,
+        ],
+    ]
+});
+
+pub const WEAKNESSES: LazyLock<Vec<Vec<Skill>>> = LazyLock::new(|| {
+    vec![
+        vec![
+            Skill::APPEARANCE,
+            Skill::BLADES,
+            Skill::DILIGENCE,
+            Skill::EAVESDROP,
+            Skill::GUNS,
+            Skill::HEALTH,
+            Skill::LABOR,
+            Skill::MELEE,
+            Skill::SPRINT,
+            Skill::STAMINA,
+        ],
+        vec![
+            Skill::COOKING,
+            Skill::CREATIVITY,
+            Skill::ESCAPE,
+            Skill::FISTS,
+            Skill::INVESTIGATE,
+            Skill::OCCULT,
+            Skill::PERFORMANCE,
+            Skill::REPAIR,
+            Skill::SEARCH,
+            Skill::TALENT,
+        ],
+        vec![
+            Skill::CHEMISTRY,
+            Skill::CHRONICLE,
+            Skill::CLIMB,
+            Skill::DECEPTION,
+            Skill::MEDICINE,
+            Skill::STEALTH,
+            Skill::TRAVEL,
+            Skill::TOXINS,
+        ],
+    ]
+});
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Skill {
@@ -33,6 +115,8 @@ pub enum Skill {
     TOXINS,
     MELEE,
     ESCAPE,
+
+    NONE,
 }
 
 impl Skill {
@@ -111,6 +195,8 @@ impl Skill {
             Self::TOXINS => "Toxins",
             Self::MELEE => "Melee",
             Self::ESCAPE => "Escape",
+
+            Self::NONE => "None",
         }
     }
 
@@ -147,6 +233,8 @@ impl Skill {
             Self::TOXINS => (Stat::INSIGHT, Stat::MOXIE),
             Self::MELEE => (Stat::MOXIE, Stat::MOXIE),
             Self::ESCAPE => (Stat::FORESIGHT, Stat::FORESIGHT),
+
+            Self::NONE => (Stat::MOXIE, Stat::MOXIE),
         }
     }
 

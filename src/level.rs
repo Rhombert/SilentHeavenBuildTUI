@@ -2,7 +2,8 @@ use std::convert::TryFrom;
 
 use ratatui::text::Text;
 
-use crate::skill::Skill;
+use crate::skill::{STRENGTHS, Skill, WEAKNESSES};
+use crate::types::{ Strengths, Weaknesses, CurrentLevels, AspectCounts, CostCounts };
 
 
 fn calculate_next_level_cost(
@@ -57,25 +58,27 @@ impl LevelStep {
     }
 }
 
+
 pub struct LevelPlan {
     steps: Vec<LevelStep>,
-    levels: [Level; 28],
-    aspects: [u32; 7],
-    costs: [u32; 28],
+    levels: CurrentLevels,
+    strengths: Strengths,
+    weaknesses: Weaknesses,
+    aspects: AspectCounts,
+    costs: CostCounts,
     xp_total: u32,
     xp_locked: u32,
     xp_remaining: u32,
 }
-
-// Skil cost is
-// current_rank * 10 BEFORE Good
-// current_rank * 10 + 10 AT OR ABOVE Good
 
 impl LevelPlan {
     pub fn new() -> Self {
         Self {
             steps: vec!(),
             levels: core::array::from_fn(|_| Level::JUVENILE),
+            strengths: [Skill::NONE, Skill::NONE,
+                        Skill::NONE, Skill::NONE],
+            weaknesses: [Skill::NONE, Skill::NONE, Skill::NONE],
             aspects: core::array::from_fn(|_| 0),
             costs: core::array::from_fn(|_| 10),
             xp_total: 2000,
@@ -90,21 +93,31 @@ impl LevelPlan {
 
     pub fn get_steps(&self) -> &Vec<LevelStep> { &self.steps }
 
-    pub fn get_aspects(&self) -> &[u32] {
+    pub fn get_aspects(&self) -> &AspectCounts {
         return &self.aspects
     }
 
     pub fn calculate(&mut self) {
+        // recalculate_plan must come first.
+        self.recalculate_plan();
+
         self.calculate_aspects();
         self.calculate_costs();
-        self.recalculate_plan();
         self.calculate_xp_usage();
     }
 
     fn recalculate_plan(&mut self) {
-        let mut aspects: [u32; 7] = [0,0,0,0,0,0,0];
+        let mut aspects: AspectCounts = [0,0,0,0,0,0,0];
 
-        for step in &mut self.steps {
+        let mut to_remove: Vec<usize> = vec!();
+
+        for i in 0..self.steps.len() {
+            let step = &mut self.steps[i];
+            if self.weaknesses.contains(&step.skill) {
+                to_remove.push(i);
+                self.levels[i] = Level::KLUTZ;
+            }
+
             let step_cost = step.calculate_final_cost(&aspects);
             step.cost = step_cost;
 
@@ -114,6 +127,10 @@ impl LevelPlan {
             aspects[
                 step.skill.get_sec_stat().index()
             ] += 1;
+        }
+
+        for idx in to_remove.iter().rev() {
+            self.steps.remove(*idx);
         }
     }
 
@@ -177,6 +194,7 @@ impl LevelPlan {
         let level = self.levels[skill.index()];
 
         if level == Level::ASTONISHING { return }
+        if level == Level::KLUTZ { return }
 
         self.levels[skill.index()] = level.increase();
         self.steps.push(LevelStep { 
@@ -195,6 +213,31 @@ impl LevelPlan {
             },
             None => {},
         };
+    }
+
+    pub fn get_strengths(&self) -> &Strengths { &self.strengths }
+    pub fn get_weaknesses(&self) -> &Weaknesses { &self.weaknesses }
+
+    pub fn set_strength(&mut self, skill: Skill) {
+        for i in 0..STRENGTHS.len() {
+            if STRENGTHS[i].contains(&skill) {
+                self.strengths[i] = skill;
+            }
+        }
+    }
+
+    pub fn set_weakness(&mut self, skill: Skill) {
+        for i in 0..WEAKNESSES.len() {
+            if WEAKNESSES[i].contains(&skill) {
+                if self.weaknesses[i] != Skill::NONE {
+                    self.levels[self.weaknesses[i].index()]
+                        = Level::JUVENILE;
+                }
+
+                self.weaknesses[i] = skill;
+                self.levels[skill.index()] = Level::KLUTZ;
+            }
+        }
     }
 
     pub fn move_selection_up(&mut self, i: usize) {

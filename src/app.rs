@@ -60,12 +60,30 @@ impl App {
             if let Some(key) = event::read()?.as_key_press_event() {
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+                    KeyCode::Char('1') => {
+                        // Set Strength
+                        let selected_skill = self.skill_tables[self.selected_table]
+                                                .selected_skill();
+                        match selected_skill {
+                            Some(skill) => self.level_plan.set_strength(skill),
+                            None => {},
+                        }
+                    }
+                    KeyCode::Char('2') => {
+                        // Set Weakness
+                        let selected_skill = self.skill_tables[self.selected_table]
+                                                .selected_skill();
+                        match selected_skill {
+                            Some(skill) => self.level_plan.set_weakness(skill),
+                            None => {},
+                        }
+                    }
                     KeyCode::Char('a') => {
                         let selected_skill = self.skill_tables[self.selected_table]
                                                 .selected_skill();
                         match selected_skill {
                             Some(skill) => self.level_plan.level_skill(skill),
-                            None => {}
+                            None => {},
                         }
                     }
                     KeyCode::Char('s') => {
@@ -73,7 +91,7 @@ impl App {
                                                 .selected_skill();
                         match selected_skill {
                             Some(skill) => self.level_plan.delevel_skill(skill),
-                            None => {}
+                            None => {},
                         }
                     }
                     KeyCode::Char('j') => self.skill_tables[self.selected_table].next_row(),
@@ -150,30 +168,37 @@ impl App {
             Constraint::Length(53),
         ]).split(skills_container[1]);
 
-        // Render tables into each area.
         self.skill_tables[0].render_table(
             frame, 
             blocks_top[0], 
             self.level_plan.get_levels_chunk(SkillCategory::SURVIVAL),
             self.level_plan.get_costs_chunk(SkillCategory::SURVIVAL),
+            self.level_plan.get_strengths(),
+            self.level_plan.get_weaknesses(),
         );
         self.skill_tables[1].render_table(
             frame, 
             blocks_top[1], 
             self.level_plan.get_levels_chunk(SkillCategory::GENERAL),
             self.level_plan.get_costs_chunk(SkillCategory::GENERAL),
+            self.level_plan.get_strengths(),
+            self.level_plan.get_weaknesses(),
         );
         self.skill_tables[2].render_table(
             frame, 
             blocks_bottom[0], 
             self.level_plan.get_levels_chunk(SkillCategory::PROFESSIONAL),
             self.level_plan.get_costs_chunk(SkillCategory::PROFESSIONAL),
+            self.level_plan.get_strengths(),
+            self.level_plan.get_weaknesses(),
         );
         self.skill_tables[3].render_table(
             frame, 
             blocks_bottom[1], 
             self.level_plan.get_levels_chunk(SkillCategory::CONFLICT),
             self.level_plan.get_costs_chunk(SkillCategory::CONFLICT),
+            self.level_plan.get_strengths(),
+            self.level_plan.get_weaknesses(),
         );
     }
 

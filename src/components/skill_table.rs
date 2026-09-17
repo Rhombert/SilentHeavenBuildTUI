@@ -2,7 +2,7 @@ use color_eyre::Result;
 use crossterm::event::{self, KeyCode};
 use ratatui::{DefaultTerminal, Frame, layout::{Constraint, Layout, Rect}, style::{Color, Style}, text::Text, widgets::{Cell, HighlightSpacing, Row, Table, TableState}};
 
-use crate::{level::Level, skill::Skill};
+use crate::{level::Level, skill::Skill, types::{Strengths, Weaknesses}};
 use crate::stat::Stat;
 
 pub struct Data {
@@ -22,6 +22,27 @@ impl Data {
             rank: Level::JUVENILE,
             cost: 10,
         }
+    }
+
+    fn formatted_array(&self, 
+                       strengths: &Strengths, 
+                       weaknesses: &Weaknesses) -> [Text; 5] {
+        let mut arr = [
+            self.stat_secondary.to_sec_text(),
+            self.stat_primary.to_pri_text(),
+            Text::from(self.skill.to_string()),
+            Text::from(self.rank.to_string()),
+            Text::from(self.cost.to_string()),
+        ];
+
+        if strengths.contains(&self.skill) {
+            arr[3] = arr[3].clone().style(Style::default().fg(Color::Yellow));
+        }
+        if weaknesses.contains(&self.skill) {
+            arr[3] = arr[3].clone().style(Style::default().fg(Color::DarkGray));
+        }
+
+        arr
     }
 
     fn ref_array(&self) -> [Text; 5] {
@@ -121,7 +142,14 @@ impl SkillTable {
         self.state.select(Some(i));
     }
 
-    pub fn render_table(&mut self, frame: &mut Frame, area: Rect, ranks: &[Level], costs: &[u32], ) {
+    pub fn render_table(&mut self, 
+                        frame: &mut Frame, 
+                        area: Rect, 
+                        ranks: &[Level], 
+                        costs: &[u32],
+                        strengths: &Strengths,
+                        weaknesses: &Weaknesses,
+    ) {
         self.update_levels(ranks);
         self.update_costs(costs);
 
@@ -134,8 +162,8 @@ impl SkillTable {
             .collect::<Row>()
             .style(header_style);
 
-        let rows = self.items.iter().enumerate().map(|(i, data)| {
-            let item = data.ref_array();
+        let rows = self.items.iter().map(|data| {
+            let item = data.formatted_array(strengths, weaknesses);
             item.into_iter()
                 .map(|content| {
                     Cell::from(content)
