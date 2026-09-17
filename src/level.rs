@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use ratatui::text::Text;
 
 use crate::skill::{STRENGTHS, Skill, WEAKNESSES};
+use crate::skill_levels::{self, SkillLevels};
 use crate::types::{ Strengths, Weaknesses, CurrentLevels, AspectCounts, CostCounts };
 
 
@@ -30,6 +31,7 @@ pub enum SkillCategory {
     CONFLICT,
 }
 
+#[derive(Clone, Copy)]
 pub struct LevelStep {
     skill: Skill,
     level: Level,
@@ -61,7 +63,7 @@ impl LevelStep {
 
 pub struct LevelPlan {
     steps: Vec<LevelStep>,
-    levels: CurrentLevels,
+    levels: SkillLevels,
     strengths: Strengths,
     weaknesses: Weaknesses,
     aspects: AspectCounts,
@@ -75,10 +77,9 @@ impl LevelPlan {
     pub fn new() -> Self {
         Self {
             steps: vec!(),
-            levels: core::array::from_fn(|_| Level::JUVENILE),
-            strengths: [Skill::NONE, Skill::NONE,
-                        Skill::NONE, Skill::NONE],
-            weaknesses: [Skill::NONE, Skill::NONE, Skill::NONE],
+            levels: SkillLevels::new(),
+            strengths: [Skill::NONE; 4],
+            weaknesses: [Skill::NONE; 3],
             aspects: core::array::from_fn(|_| 0),
             costs: core::array::from_fn(|_| 10),
             xp_total: 2000,
@@ -98,8 +99,9 @@ impl LevelPlan {
     }
 
     pub fn calculate(&mut self) {
+        self.levels.reset(self.strengths, self.weaknesses);
+        // These two must be called first, in this order.
         self.drop_weaknesses();
-        // recalculate_plan must come first.
         self.recalculate_plan();
 
         self.calculate_aspects();
@@ -126,7 +128,7 @@ impl LevelPlan {
 
             let step_cost = step.calculate_final_cost(&aspects);
             step.cost = step_cost;
-
+            self.levels.increase_skill(step.skill);
 
             aspects[
                 step.skill.get_pri_stat().index()
@@ -199,7 +201,6 @@ impl LevelPlan {
         if level == Level::ASTONISHING { return }
         if level == Level::KLUTZ { return }
 
-        self.levels[skill.index()] = level.increase();
         self.steps.push(LevelStep { 
             skill, 
             level: level.increase(),
@@ -211,8 +212,6 @@ impl LevelPlan {
         match self.steps.iter().rposition(|s| s.skill == skill) {
             Some(idx) => { 
                 self.steps.remove(idx); 
-                let level = self.levels[skill.index()];
-                self.levels[skill.index()] = level.decrease();
             },
             None => {},
         };
@@ -238,7 +237,6 @@ impl LevelPlan {
                 }
 
                 self.weaknesses[i] = skill;
-                self.levels[skill.index()] = Level::KLUTZ;
             }
         }
     }
@@ -326,12 +324,12 @@ impl Level {
     pub fn decrease(self) -> Self {
         if self == Self::KLUTZ { return self }
 
-        let mut current = self as usize;
-
         // KLUTZ can only be achieved through a 'weakness'
-        if current == 1 {
+        if self == Self::JUVENILE {
             return Self::JUVENILE;
         }
+
+        let mut current = self as usize;
 
         current -= 1;
 

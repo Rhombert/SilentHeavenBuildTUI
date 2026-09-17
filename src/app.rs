@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use color_eyre::Result;
 
-use crossterm::event::{self, KeyCode};
+use crossterm::event::{self, KeyCode, KeyModifiers};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::{DefaultTerminal, Frame};
 
@@ -13,6 +13,7 @@ use crate::components::{
 };
 use crate::components::skill_table::{SkillTable, generate_conflict_skills, generate_general_skills, generate_professional_skills, generate_survival_skills};
 use crate::level::{LevelPlan, SkillCategory};
+use crate::traits::table_control::TableControl;
 
 
 pub struct App {
@@ -39,14 +40,22 @@ impl App {
         }
     }
 
+    fn get_table_control(&mut self, idx: usize) -> Option<&mut dyn TableControl> {
+        match idx {
+            0..4 => Some(&mut self.skill_tables[idx]),
+            4 => Some(&mut self.history_table),
+            _ => None,
+        }
+    }
+
     fn decrement_selected_table(&mut self) {
-        if self.selected_table == 0 { self.selected_table = 3; }
+        if self.selected_table == 0 { self.selected_table = 4; }
         else { self.selected_table -= 1; }
     }
 
     fn increment_selected_table(&mut self) {
         self.selected_table += 1;
-        self.selected_table %= 4;
+        self.selected_table %= 5;
     }
 
     pub fn run(mut self, terminal: &mut DefaultTerminal) -> Result<()> {
@@ -94,31 +103,64 @@ impl App {
                             None => {},
                         }
                     }
-                    KeyCode::Char('j') => self.skill_tables[self.selected_table].next_row(),
-                    KeyCode::Char('k') => self.skill_tables[self.selected_table].previous_row(),
+                    KeyCode::Char('J') => {
+                        if self.selected_table == 4 {
+                            self.history_table.move_down(&mut self.level_plan);
+                        }
+                    }
+                    KeyCode::Char('j') => {
+                        match self.get_table_control(self.selected_table) {
+                            Some(tc) => tc.next_row(),
+                            None => {},
+                        }
+                    }
+                    KeyCode::Char('K') => {
+                        if self.selected_table == 4 {
+                            self.history_table.move_up(&mut self.level_plan);
+                        }
+                    }
+                    KeyCode::Char('k') => {
+                        match self.get_table_control(self.selected_table) {
+                            Some(tc) => tc.previous_row(),
+                            None => {},
+                        }
+                    }
                     KeyCode::Char('h') => {
-                        let selection = match self.skill_tables[self.selected_table]
-                            .currently_selected() {
-                            Some(s) => s,
-                            _ => 0,
-                        };
-                        self.skill_tables[self.selected_table].set_selected(None);
+                        let previous_tc = self.get_table_control(self.selected_table);
+                        // dbg!(previous_tc.is_some());
+                        if previous_tc.is_some() {
+                            let selection = previous_tc.unwrap().currently_selected();
 
-                        self.decrement_selected_table();
+                            match self.get_table_control(self.selected_table) {
+                                Some(tc) => tc.set_selected(None),
+                                None => {},
+                            }
 
-                        self.skill_tables[self.selected_table].set_selected(Some(selection));
+                            self.decrement_selected_table();
+
+                            match self.get_table_control(self.selected_table) {
+                                Some(tc) => tc.set_selected(selection),
+                                None => {},
+                            }
+                        }
                     },
                     KeyCode::Char('l') => {
-                        let selection = match self.skill_tables[self.selected_table]
-                            .currently_selected() {
-                            Some(s) => s,
-                            _ => 0,
-                        };
-                        self.skill_tables[self.selected_table].set_selected(None);
+                        let previous_tc = self.get_table_control(self.selected_table);
+                        if previous_tc.is_some() {
+                            let selection = previous_tc.unwrap().currently_selected();
 
-                        self.increment_selected_table();
+                            match self.get_table_control(self.selected_table) {
+                                Some(tc) => tc.set_selected(None),
+                                None => {},
+                            }
 
-                        self.skill_tables[self.selected_table].set_selected(Some(selection));
+                            self.increment_selected_table();
+
+                            match self.get_table_control(self.selected_table) {
+                                Some(tc) => tc.set_selected(selection),
+                                None => {},
+                            }
+                        }
                     },
                     _ => {},
                 }

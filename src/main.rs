@@ -7,6 +7,7 @@ mod stat;
 mod skill_levels;
 mod components;
 mod types;
+mod traits;
 
 use app::App;
 

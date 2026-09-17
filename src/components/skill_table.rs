@@ -2,7 +2,7 @@ use color_eyre::Result;
 use crossterm::event::{self, KeyCode};
 use ratatui::{DefaultTerminal, Frame, layout::{Constraint, Layout, Rect}, style::{Color, Style}, text::Text, widgets::{Cell, HighlightSpacing, Row, Table, TableState}};
 
-use crate::{level::Level, skill::Skill, types::{Strengths, Weaknesses}};
+use crate::{level::Level, skill::Skill, traits::table_control::TableControl, types::{Strengths, Weaknesses}};
 use crate::stat::Stat;
 
 pub struct Data {
@@ -78,6 +78,51 @@ pub struct SkillTable {
     items: Vec<Data>,
 }
 
+impl TableControl for SkillTable {
+    fn selected_skill(&self) -> Option<Skill> {
+        match self.state.selected() {
+            Some(s) => Some(self.items[s].skill),
+            None => None,
+        }
+    }
+
+    fn currently_selected(&self) -> Option<usize> {
+        self.state.selected()
+    }
+
+    fn set_selected(&mut self, idx: Option<usize>) {
+        self.state.select(idx);
+    }
+
+    fn next_row(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() -1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous_row(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+}
+
 // Should be able to move the table rendering functionality into its own
 // impl, and have the App call multiple with Rects it predetermines.
 impl SkillTable {
@@ -102,49 +147,6 @@ impl SkillTable {
         for (i, cost) in costs.iter().enumerate() {
             self.items[i].cost = *cost;
         }
-    }
-
-    pub fn selected_skill(&self) -> Option<Skill> {
-        match self.state.selected() {
-            Some(s) => Some(self.items[s].skill),
-            None => None,
-        }
-    }
-
-    pub fn currently_selected(&self) -> Option<usize> {
-        self.state.selected()
-    }
-
-    pub fn set_selected(&mut self, idx: Option<usize>) {
-        self.state.select(idx);
-    }
-
-    pub const fn next_row(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() -1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    pub const fn previous_row(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
     }
 
     pub fn render_table(&mut self, 
