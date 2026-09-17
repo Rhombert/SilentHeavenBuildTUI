@@ -35,6 +35,11 @@ impl Data {
             Text::from(self.cost.to_string()),
         ];
 
+        if self.rank == Level::KLUTZ {
+            arr[4] = Text::from("weakness")
+                .style(Style::default().fg(Color::DarkGray));
+        }
+        
         if strengths.contains(&self.skill) {
             arr[3] = arr[3].clone().style(Style::default().fg(Color::Yellow));
         }
