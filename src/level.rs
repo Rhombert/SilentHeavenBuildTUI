@@ -98,6 +98,7 @@ impl LevelPlan {
     }
 
     pub fn calculate(&mut self) {
+        self.drop_weaknesses();
         // recalculate_plan must come first.
         self.recalculate_plan();
 
@@ -106,20 +107,26 @@ impl LevelPlan {
         self.calculate_xp_usage();
     }
 
+    fn drop_weaknesses(&mut self) {
+        self.steps.retain(
+            | step | {
+               if self.weaknesses.contains(&step.skill) {
+                   return false
+               }
+               true
+            }
+        )
+    }
+
     fn recalculate_plan(&mut self) {
         let mut aspects: AspectCounts = [0,0,0,0,0,0,0];
 
-        let mut to_remove: Vec<usize> = vec!();
-
         for i in 0..self.steps.len() {
             let step = &mut self.steps[i];
-            if self.weaknesses.contains(&step.skill) {
-                to_remove.push(i);
-                self.levels[i] = Level::KLUTZ;
-            }
 
             let step_cost = step.calculate_final_cost(&aspects);
             step.cost = step_cost;
+
 
             aspects[
                 step.skill.get_pri_stat().index()
@@ -127,10 +134,6 @@ impl LevelPlan {
             aspects[
                 step.skill.get_sec_stat().index()
             ] += 1;
-        }
-
-        for idx in to_remove.iter().rev() {
-            self.steps.remove(*idx);
         }
     }
 
