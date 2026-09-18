@@ -37,14 +37,19 @@ impl Data {
 
         if self.rank == Level::KLUTZ {
             arr[4] = Text::from("weakness")
-                .style(Style::default().fg(Color::DarkGray));
+                .style(Style::default().fg(Color::Black));
+        }
+
+        if self.rank == Level::ASTONISHING {
+            arr[4] = Text::from("-")
+                .style(Style::default().fg(Color::Black));
         }
         
         if strengths.contains(&self.skill) {
             arr[3] = arr[3].clone().style(Style::default().fg(Color::Yellow));
         }
         if weaknesses.contains(&self.skill) {
-            arr[3] = arr[3].clone().style(Style::default().fg(Color::DarkGray));
+            arr[3] = arr[3].clone().style(Style::default().fg(Color::Black));
         }
 
         arr

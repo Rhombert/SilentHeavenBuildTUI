@@ -101,10 +101,16 @@ impl LevelPlan {
 
     pub fn calculate(&mut self) {
         self.levels.reset(self.strengths, self.weaknesses);
+
+        // Called here to calculate the initial, no XP spent aspects.
+        // This will vary based on character strengths and weaknesses.
         self.calculate_aspects();
-        // These two must be called first, in this order.
+
         self.drop_weaknesses();
         self.recalculate_plan();
+
+        // This needs to be called again after levels have been
+        //  applied.
         self.calculate_aspects();
 
         self.calculate_costs();
