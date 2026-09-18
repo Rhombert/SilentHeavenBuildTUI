@@ -3,8 +3,8 @@ use std::convert::TryFrom;
 use ratatui::text::Text;
 
 use crate::skill::{STRENGTHS, Skill, WEAKNESSES};
-use crate::skill_levels::{self, SkillLevels};
-use crate::types::{ Strengths, Weaknesses, CurrentLevels, AspectCounts, CostCounts };
+use crate::skill_levels::SkillLevels;
+use crate::types::{ Strengths, Weaknesses, AspectCounts, CostCounts };
 
 
 fn calculate_next_level_cost(
@@ -17,7 +17,8 @@ fn calculate_next_level_cost(
     let stat_count = aspects[pri_stat.index()];
 
     let rounded_stat_count = stat_count as f64 - (stat_count % 10) as f64;
-    let discount = 1.00 - (rounded_stat_count / 100.0);
+    let mut discount = 1.00 - (rounded_stat_count / 100.0);
+    if discount < 0.2 { discount = 0.2; }
 
     let final_cost = base_cost * discount;
 
@@ -56,11 +57,11 @@ impl LevelStep {
     }
 
     pub fn calculate_final_cost(&self, aspects: &[u32]) -> u32 {
-        calculate_next_level_cost(self.level, self.skill, aspects)
+        calculate_next_level_cost(self.level.decrease(), self.skill, aspects)
     }
 }
 
-
+#[derive(Clone)]
 pub struct LevelPlan {
     steps: Vec<LevelStep>,
     levels: SkillLevels,
@@ -100,11 +101,12 @@ impl LevelPlan {
 
     pub fn calculate(&mut self) {
         self.levels.reset(self.strengths, self.weaknesses);
+        self.calculate_aspects();
         // These two must be called first, in this order.
         self.drop_weaknesses();
         self.recalculate_plan();
-
         self.calculate_aspects();
+
         self.calculate_costs();
         self.calculate_xp_usage();
     }
@@ -121,21 +123,18 @@ impl LevelPlan {
     }
 
     fn recalculate_plan(&mut self) {
-        let mut aspects: AspectCounts = [0,0,0,0,0,0,0];
+        let mut aspects: AspectCounts = self.aspects.clone();
 
         for i in 0..self.steps.len() {
             let step = &mut self.steps[i];
 
+            self.levels.increase_skill(step.skill);
+            step.level = self.levels[step.skill.index()];
             let step_cost = step.calculate_final_cost(&aspects);
             step.cost = step_cost;
-            self.levels.increase_skill(step.skill);
 
-            aspects[
-                step.skill.get_pri_stat().index()
-            ] += 1;
-            aspects[
-                step.skill.get_sec_stat().index()
-            ] += 1;
+            aspects[step.skill.get_pri_stat().index()] += 1;
+            aspects[step.skill.get_sec_stat().index()] += 1;
         }
     }
 

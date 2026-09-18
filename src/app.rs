@@ -35,7 +35,6 @@ impl App {
             ],
             history_table: HistoryTable::new(),
             selected_table: 0,
-
             level_plan: LevelPlan::new(),
         }
     }
@@ -88,19 +87,23 @@ impl App {
                         }
                     }
                     KeyCode::Char('a') => {
-                        let selected_skill = self.skill_tables[self.selected_table]
-                                                .selected_skill();
-                        match selected_skill {
-                            Some(skill) => self.level_plan.level_skill(skill),
-                            None => {},
+                        if self.selected_table != 4 {
+                            let selected_skill = self.skill_tables[self.selected_table]
+                                                    .selected_skill();
+                            match selected_skill {
+                                Some(skill) => self.level_plan.level_skill(skill),
+                                None => {},
+                            }
                         }
                     }
                     KeyCode::Char('s') => {
-                        let selected_skill = self.skill_tables[self.selected_table]
-                                                .selected_skill();
-                        match selected_skill {
-                            Some(skill) => self.level_plan.delevel_skill(skill),
-                            None => {},
+                        if self.selected_table != 4 {
+                            let selected_skill = self.skill_tables[self.selected_table]
+                                                    .selected_skill();
+                            match selected_skill {
+                                Some(skill) => self.level_plan.delevel_skill(skill),
+                                None => {},
+                            }
                         }
                     }
                     KeyCode::Char('J') => {

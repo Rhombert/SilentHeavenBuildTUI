@@ -4,7 +4,7 @@ use crate::skill::Skill;
 use crate::level::Level;
 use crate::types::{Strengths, Weaknesses};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SkillLevels {
     // Contains the current level for each
     levels: [Level; Skill::length()]
@@ -44,6 +44,8 @@ impl SkillLevels {
     pub fn decrease_skill(&mut self, skill: Skill) {
         self.levels[skill.index()] = self.levels[skill.index()].decrease();
     }
+
+    pub fn get_level_arr(&self) -> &[Level; Skill::length()] { &self.levels }
 
     pub fn iter(&self) -> std::slice::Iter<'_, Level> {
         self.levels.iter()
