@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use ratatui::text::Text;
+use serde::{Deserialize, Serialize};
 
 use crate::skill::{STRENGTHS, Skill, WEAKNESSES};
 use crate::skill_levels::SkillLevels;
@@ -32,7 +33,7 @@ pub enum SkillCategory {
     CONFLICT,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct LevelStep {
     skill: Skill,
     level: Level,
@@ -94,6 +95,9 @@ impl LevelPlan {
     pub fn get_xp_remaining(&self) -> u32 { self.xp_remaining }
 
     pub fn get_steps(&self) -> &Vec<LevelStep> { &self.steps }
+    pub fn set_steps(&mut self, steps: Vec<LevelStep>) { 
+        self.steps = steps;
+    }
 
     pub fn get_aspects(&self) -> &AspectCounts {
         return &self.aspects
@@ -110,7 +114,7 @@ impl LevelPlan {
         self.recalculate_plan();
 
         // This needs to be called again after levels have been
-        //  applied.
+        //  applied, to calculate the final aspects.
         self.calculate_aspects();
 
         self.calculate_costs();
@@ -260,7 +264,7 @@ impl LevelPlan {
     }
 }
 
-#[derive(Default, Clone, Copy, PartialEq)]
+#[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Level {
     KLUTZ,
     #[default]

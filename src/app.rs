@@ -12,6 +12,7 @@ use crate::components::{
     xp_list::XPList,
 };
 use crate::components::skill_table::{SkillTable, generate_conflict_skills, generate_general_skills, generate_professional_skills, generate_survival_skills};
+use crate::fs::data::SaveData;
 use crate::level::{LevelPlan, SkillCategory};
 use crate::traits::table_control::TableControl;
 
@@ -97,12 +98,17 @@ impl App {
                         }
                     }
                     KeyCode::Char('s') => {
-                        if self.selected_table != 4 {
-                            let selected_skill = self.skill_tables[self.selected_table]
-                                                    .selected_skill();
-                            match selected_skill {
-                                Some(skill) => self.level_plan.delevel_skill(skill),
-                                None => {},
+                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                            let save_data = SaveData::copy_plan(&self.level_plan);
+                            save_data.save_to("test.sav");
+                        } else {
+                            if self.selected_table != 4 {
+                                let selected_skill = self.skill_tables[self.selected_table]
+                                                        .selected_skill();
+                                match selected_skill {
+                                    Some(skill) => self.level_plan.delevel_skill(skill),
+                                    None => {},
+                                }
                             }
                         }
                     }
@@ -148,20 +154,37 @@ impl App {
                         }
                     },
                     KeyCode::Char('l') => {
-                        let previous_tc = self.get_table_control(self.selected_table);
-                        if previous_tc.is_some() {
-                            let selection = previous_tc.unwrap().currently_selected();
+                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                            let data = SaveData::load_from("test.sav");
+                            match data {
+                                Ok(data) => {
+                                    self.level_plan.set_steps(data.plan);
+                                    for strength in data.strengths {
+                                        self.level_plan.set_strength(strength);
+                                    }
+                                    for weakness in data.weaknesses {
+                                        self.level_plan.set_weakness(weakness);
+                                    }
+                                }
+                                Err(e) => {
+                                }
+                            };
+                        } else {
+                            let previous_tc = self.get_table_control(self.selected_table);
+                            if previous_tc.is_some() {
+                                let selection = previous_tc.unwrap().currently_selected();
 
-                            match self.get_table_control(self.selected_table) {
-                                Some(tc) => tc.set_selected(None),
-                                None => {},
-                            }
+                                match self.get_table_control(self.selected_table) {
+                                    Some(tc) => tc.set_selected(None),
+                                    None => {},
+                                }
 
-                            self.increment_selected_table();
+                                self.increment_selected_table();
 
-                            match self.get_table_control(self.selected_table) {
-                                Some(tc) => tc.set_selected(selection),
-                                None => {},
+                                match self.get_table_control(self.selected_table) {
+                                    Some(tc) => tc.set_selected(selection),
+                                    None => {},
+                                }
                             }
                         }
                     },

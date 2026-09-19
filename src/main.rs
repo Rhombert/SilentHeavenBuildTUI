@@ -1,3 +1,5 @@
+use std::env::current_exe;
+
 use color_eyre::Result;
 
 mod app;
@@ -8,6 +10,7 @@ mod skill_levels;
 mod components;
 mod types;
 mod traits;
+mod fs;
 
 use app::App;
 

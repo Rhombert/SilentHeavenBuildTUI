@@ -1,5 +1,7 @@
 use std::sync::LazyLock;
 
+use serde::{Deserialize, Serialize};
+
 use crate::stat::Stat;
 
 pub const STRENGTHS: LazyLock<Vec<Vec<Skill>>> = LazyLock::new(|| {
@@ -82,7 +84,7 @@ pub const WEAKNESSES: LazyLock<Vec<Vec<Skill>>> = LazyLock::new(|| {
     ]
 });
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Skill {
     HEALTH,
     SEARCH,
