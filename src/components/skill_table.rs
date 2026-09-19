@@ -1,6 +1,4 @@
-use color_eyre::Result;
-use crossterm::event::{self, KeyCode};
-use ratatui::{DefaultTerminal, Frame, layout::{Constraint, Layout, Rect}, style::{Color, Style}, text::Text, widgets::{Cell, HighlightSpacing, Row, Table, TableState}};
+use ratatui::{Frame, layout::{Constraint, Rect}, style::{Color, Style}, text::Text, widgets::{Cell, HighlightSpacing, Row, Table, TableState}};
 
 use crate::{level::Level, skill::Skill, traits::table_control::TableControl, types::{Strengths, Weaknesses}};
 use crate::stat::Stat;
@@ -53,28 +51,6 @@ impl Data {
         }
 
         arr
-    }
-
-    fn ref_array(&self) -> [Text; 5] {
-        [
-            self.stat_secondary.to_sec_text(),
-            self.stat_primary.to_pri_text(),
-            Text::from(self.skill.to_string()),
-            Text::from(self.rank.to_string()),
-            Text::from(self.cost.to_string()),
-        ]
-    }
-
-    fn stat_primary(&self) -> &Stat {
-        &self.stat_primary
-    }
-
-    fn stat_secondary(&self) -> &Stat {
-        &self.stat_secondary
-    }
-
-    fn skill(&self) -> &Skill {
-        &self.skill
     }
 }
 
