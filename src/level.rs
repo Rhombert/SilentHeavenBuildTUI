@@ -1,10 +1,12 @@
 use std::convert::TryFrom;
 
+use ratatui::style::Style;
 use ratatui::text::Text;
 use serde::{Deserialize, Serialize};
 
 use crate::skill::{STRENGTHS, Skill, WEAKNESSES};
 use crate::skill_levels::SkillLevels;
+use crate::stat::{Stat, stat_to_pri_string, stat_to_sec_string};
 use crate::types::{ Strengths, Weaknesses, AspectCounts, CostCounts };
 
 
@@ -35,30 +37,48 @@ pub enum SkillCategory {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct LevelStep {
+    pub lock: bool,
     skill: Skill,
     level: Level,
     cost: u32,
+    #[serde(skip)]
+    aspects: AspectCounts,
 }
 
 impl LevelStep {
     pub fn new(skill: Skill, level: Level, cost: u32) -> Self {
-        LevelStep { skill, level, cost }
+        LevelStep { lock: false, skill, level, cost, aspects: [0; 7] }
     }
 
-    pub fn ref_array(&self) -> [Text; 3] {
+    pub fn ref_array(&self) -> [Text; 13] {
         [
+            Text::from(match self.lock {
+                true => "[x]".to_string(),
+                false => "[ ]".to_string(),
+            }),
             Text::from(self.skill.to_string()),
             Text::from(self.level.to_string()),
             Text::from(self.cost.to_string()),
+            Text::from( stat_to_pri_string( &self.skill.get_pri_stat() )
+             ).style(Style::new().fg(self.skill.get_pri_stat().to_color())),
+            Text::from( stat_to_sec_string( &self.skill.get_sec_stat() )
+             ).style(Style::new().fg(self.skill.get_sec_stat().to_color())),
+            Text::from(self.aspects[0].to_string()),
+            Text::from(self.aspects[1].to_string()),
+            Text::from(self.aspects[2].to_string()),
+            Text::from(self.aspects[3].to_string()),
+            Text::from(self.aspects[4].to_string()),
+            Text::from(self.aspects[5].to_string()),
+            Text::from(self.aspects[6].to_string()),
         ]
-    }
-
-    pub fn calculate_base_cost(&self) -> u32 {
-        self.level.level_up_cost()
     }
 
     pub fn calculate_final_cost(&self, aspects: &[u32]) -> u32 {
         calculate_next_level_cost(self.level.decrease(), self.skill, aspects)
+    }
+
+    pub fn set_lock(&mut self, lock: bool) {
+        self.lock = lock;
     }
 }
 
@@ -145,6 +165,8 @@ impl LevelPlan {
 
             aspects[step.skill.get_pri_stat().index()] += 1;
             aspects[step.skill.get_sec_stat().index()] += 1;
+
+            step.aspects = aspects.clone();
         }
     }
 
@@ -204,6 +226,10 @@ impl LevelPlan {
         }
     }
 
+    pub fn lock_step(&mut self, step_idx: usize) {
+        self.steps[step_idx].set_lock(true);
+    }
+
     pub fn level_skill(&mut self, skill: Skill) {
         let level = self.levels[skill.index()];
 
@@ -211,16 +237,20 @@ impl LevelPlan {
         if level == Level::KLUTZ { return }
 
         self.steps.push(LevelStep { 
+            lock: false,
             skill, 
             level: level.increase(),
             cost: self.costs[skill.index()],
+            aspects: [0; 7],
         });
     }
 
     pub fn delevel_skill(&mut self, skill: Skill) {
         match self.steps.iter().rposition(|s| s.skill == skill) {
             Some(idx) => { 
-                self.steps.remove(idx); 
+                if !self.steps[idx].lock {
+                    self.steps.remove(idx); 
+                }
             },
             None => {},
         };
@@ -309,7 +339,7 @@ impl Level {
     pub fn level_up_cost(&self) -> u32 {
         let level_int = self.index() as u32;
 
-        if level_int < 4 { level_int * 10 }
+        if level_int < 5 { level_int * 10 }
         else { (level_int * 10) + 10 }
     }
 

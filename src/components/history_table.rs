@@ -1,8 +1,8 @@
 use std::cmp;
 
-use ratatui::{Frame, layout::{Constraint, Rect}, style::{Color, Style}, widgets::{Cell, Row, Table, TableState}};
+use ratatui::{Frame, layout::{Constraint, Rect}, style::{Color, Style}, text::Text, widgets::{Cell, Row, Table, TableState}};
 
-use crate::{level::{LevelPlan, LevelStep}, skill::Skill, traits::table_control::TableControl};
+use crate::{level::{LevelPlan, LevelStep}, skill::Skill, stat::Stat, traits::table_control::TableControl};
 
 pub struct HistoryTable {
     state: TableState,
@@ -75,13 +75,44 @@ impl HistoryTable {
     }
     
     pub fn move_up(&mut self, level_plan: &mut LevelPlan) {
-        level_plan.move_selection_up(self.selection_idx);
-        self.previous_row();
+        if !level_plan.get_steps()[self.selection_idx.saturating_sub(1)].lock {
+            level_plan.move_selection_up(self.selection_idx);
+            self.previous_row();
+        }
     }
 
     pub fn move_down(&mut self, level_plan: &mut LevelPlan) {
         level_plan.move_selection_down(self.selection_idx);
         self.next_row();
+    }
+
+    pub fn lock_selection(&mut self, level_plan: &mut LevelPlan) {
+        level_plan.lock_step(self.selection_idx);
+    }
+
+    fn build_header() -> Row<'static> {
+        [
+            "", "SKILL", "RANK", "$", "PRI", "Sec", 
+            "CON", "MOX", "PRE", "ATH", "EMP", "INS", "FOR"
+        ]   .into_iter()
+            .enumerate()
+            .map(|(i, t)| {
+                match i {
+                    6..=12 => {
+                        let stat_idx = i - 6;
+                        let stat = Stat::from(stat_idx);
+                        Cell::from(
+                            Text::from(t)
+                                .style(Style::new()
+                                    .fg(stat.to_color()))
+                        )
+                    }
+                    _ => Cell::from(t)
+                }
+            })
+            .collect::<Row>()
+            .style(Style::default())
+
     }
 
     pub fn render(&mut self, frame: &mut Frame, area: Rect, items: &Vec<LevelStep>) {
@@ -90,7 +121,7 @@ impl HistoryTable {
         let range_start = self.selection_idx.saturating_sub(self.visible_rows/2);
         let range_end = {
             if items.len() < self.visible_rows { items.len() }
-            else { 
+            else {
                 cmp::min(
                     range_start + self.visible_rows,
                     items.len(),
@@ -124,11 +155,22 @@ impl HistoryTable {
         let t = Table::new(
             rows,
             [
+                Constraint::Length(4),
                 Constraint::Length(12),
                 Constraint::Length(12),
-                Constraint::Length(12),
+                Constraint::Length(4),
+                Constraint::Length(4),
+                Constraint::Length(4),
+                Constraint::Length(4),
+                Constraint::Length(4),
+                Constraint::Length(4),
+                Constraint::Length(4),
+                Constraint::Length(4),
+                Constraint::Length(4),
+                Constraint::Length(4),
             ]
         )
+        .header(Self::build_header())
         .row_highlight_style(Style::default().bg(Color::DarkGray));
 
         frame.render_stateful_widget(t, area, &mut self.state);

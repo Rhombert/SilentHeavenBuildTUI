@@ -112,6 +112,11 @@ impl App {
                             }
                         }
                     }
+                    KeyCode::Char('c') => {
+                        if self.selected_table == 4 {
+                            self.history_table.lock_selection(&mut self.level_plan);
+                        }
+                    }
                     KeyCode::Char('J') => {
                         if self.selected_table == 4 {
                             self.history_table.move_down(&mut self.level_plan);
@@ -209,8 +214,8 @@ impl App {
         ]).split(main_rects[0]);
 
         let bottom_panes = Layout::horizontal([
-            Constraint::Percentage(50),
-            Constraint::Percentage(50),
+            Constraint::Length(20),
+            Constraint::Fill(1),
         ]).split(main_rects[1]);
 
 
