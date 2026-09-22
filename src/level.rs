@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 
 use ratatui::style::Style;
@@ -308,6 +309,44 @@ pub enum Level {
     COMPETITIVE,
     BRILLIANT,
     ASTONISHING,
+}
+
+impl PartialOrd for Level {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        (*self as usize).partial_cmp(&(*other as usize))
+    }
+
+    fn ge(&self, other: &Self) -> bool {
+        match self.partial_cmp(other).unwrap() {
+            Ordering::Greater => true,
+            Ordering::Equal => true,
+            Ordering::Less => false,
+        }
+    }
+
+    fn le(&self, other: &Self) -> bool {
+        match self.partial_cmp(other).unwrap() {
+            Ordering::Greater => false,
+            Ordering::Equal => true,
+            Ordering::Less => true,
+        }
+    }
+
+    fn gt(&self, other: &Self) -> bool {
+        match self.partial_cmp(other).unwrap() {
+            Ordering::Greater => true,
+            Ordering::Equal => false,
+            Ordering::Less => false,
+        }
+    }
+
+    fn lt(&self, other: &Self) -> bool {
+        match self.partial_cmp(other).unwrap() {
+            Ordering::Greater => false,
+            Ordering::Equal => false,
+            Ordering::Less => true,
+        }
+    }
 }
 
 impl TryFrom<usize> for Level {

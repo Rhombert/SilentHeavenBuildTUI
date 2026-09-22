@@ -11,6 +11,122 @@ pub struct Data {
     cost: u32,
 }
 
+fn has_natural_bonus(skill: &Skill, level: &Level) -> bool {
+    match skill {
+        Skill::APPEARANCE => { 
+            if level >= &Level::BRILLIANT { true }
+            else { false }
+        },
+        Skill::BLADES => { 
+            if level >= &Level::EXPERIENCED { true }
+            else { false }
+        },
+        Skill::CHEMISTRY => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::CHRONICLE => { 
+            if level >= &Level::BRILLIANT { true }
+            else { false }
+        },
+        Skill::CLIMB => { 
+            if level >= &Level::BRILLIANT { true }
+            else { false }
+        },
+        Skill::COOKING => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::CREATIVITY => { 
+            false
+        },
+        Skill::DECEPTION => { 
+            if level >= &Level::COMPETITIVE { true }
+            else { false }
+        },
+        Skill::DILIGENCE => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::EAVESDROP => { 
+            if level >= &Level::COMPETITIVE { true }
+            else { false }
+        },
+        Skill::ESCAPE => { 
+            if level >= &Level::BRILLIANT { true }
+            else { false }
+        },
+        Skill::FISTS => { 
+            if level >= &Level::EXPERIENCED { true }
+            else { false }
+        },
+        Skill::GUNS => { 
+            if level >= &Level::EXPERIENCED { true }
+            else { false }
+        },
+        Skill::HEALTH => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::INVESTIGATE => { 
+            if level >= &Level::BRILLIANT { true }
+            else { false }
+        },
+        Skill::LABOR => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::MEDICINE => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::MELEE => { 
+            if level >= &Level::EXPERIENCED { true }
+            else { false }
+        },
+        Skill::OCCULT => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::PERFORMANCE => { 
+            if level >= &Level::EXPERIENCED { true }
+            else { false }
+        },
+        Skill::REPAIR => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::SEARCH => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::SPRINT => { 
+            if level >= &Level::BRILLIANT { true }
+            else { false }
+        },
+        Skill::STAMINA => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::STEALTH=> { 
+            if level >= &Level::DEDICATED { true }
+            else { false }
+        },
+        Skill::TALENT => { 
+            if level >= &Level::ASTONISHING { true }
+            else { false }
+        },
+        Skill::TRAVEL => { 
+            if level >= &Level::BRILLIANT { true }
+            else { false }
+        },
+        Skill::TOXINS => { 
+            false
+        },
+        Skill::NONE => false,
+    }
+}
+
 impl Data {
     pub fn new(skill: &Skill) ->Self {
         Data {
@@ -28,7 +144,13 @@ impl Data {
         let mut arr = [
             self.stat_secondary.to_sec_text(),
             self.stat_primary.to_pri_text(),
-            Text::from(self.skill.to_string()),
+            Text::from(self.skill.to_string())
+                .style(Style::new().fg(
+                    match has_natural_bonus(&self.skill, &self.rank) {
+                        true => Color::LightYellow,
+                        false => Color::White,
+                    }
+                )),
             Text::from(self.rank.to_string()),
             Text::from(self.cost.to_string()),
         ];
