@@ -1,5 +1,3 @@
-use std::env::current_exe;
-
 use color_eyre::Result;
 
 mod app;

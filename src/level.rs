@@ -3,11 +3,11 @@ use std::convert::TryFrom;
 
 use ratatui::style::Style;
 use ratatui::text::Text;
-use serde::{Deserialize, Serialize};
+use serde::{ Deserialize, Serialize };
 
-use crate::skill::{STRENGTHS, Skill, WEAKNESSES};
+use crate::skill::{ Skill, STRENGTHS, WEAKNESSES };
 use crate::skill_levels::SkillLevels;
-use crate::stat::{Stat, stat_to_pri_string, stat_to_sec_string};
+use crate::stat::{ stat_to_pri_string, stat_to_sec_string };
 use crate::types::{ Strengths, Weaknesses, AspectCounts, CostCounts };
 
 
